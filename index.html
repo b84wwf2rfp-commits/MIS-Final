@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A1C22">
+<title>Fly Fishing Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone-width game column; screens swap inside it, bottom nav fixed. Single dark look by design. */
+:root{
+  --ink:#F2F7F5; --muted:#A9C4C9; --night:#07161B; --deep:#0B2229; --water:#0E2A33;
+  --panel:#143843; --line:#2A5B67; --bar:#0A1C22; --barline:#1F4550;
+  --gold:#FFB547; --goldInk:#2A1A00; --goldShadow:#B97A12; --mint:#5EE6B0; --sky:#4CC3FF;
+  --display:'Fredoka',ui-rounded,'Segoe UI',system-ui,sans-serif;
+  --body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+:root{padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--deep);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.4}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bar)}
+*{box-sizing:border-box}
+button,input,select{font-family:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--gold)}
+:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.app{max-width:480px;margin:0 auto;min-height:100%;position:relative;background:var(--water);padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);font-weight:600;margin:0;text-wrap:balance}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+
+/* HUD */
+.hud{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bar);border-bottom:1px solid var(--barline);padding-block:10px}
+.hudrow{display:flex;align-items:center;gap:12px}
+.lvl{width:50px;height:50px;border-radius:50%;background:var(--gold);color:var(--goldInk);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;box-shadow:0 3px 0 var(--goldShadow)}
+.lvl small{font-size:9px;font-weight:700;letter-spacing:.08em}
+.lvl b{font-family:var(--display);font-weight:600;font-size:22px;line-height:18px;display:inline-block}
+.xpwrap{flex:1;min-width:0}
+.xptop{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--muted)}
+.xptop span:last-child{color:var(--ink);font-variant-numeric:tabular-nums}
+.xpbar{margin-top:6px;height:14px;border-radius:999px;background:#143843;overflow:hidden}
+.xpfill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--mint),var(--sky));transition:width .6s ease}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,181,71,.95),0 3px 0 var(--goldShadow)}60%{box-shadow:0 0 0 9px rgba(255,181,71,0),0 3px 0 var(--goldShadow)}100%{box-shadow:0 0 0 0 rgba(255,181,71,0),0 3px 0 var(--goldShadow)}}
+@keyframes barring{0%{box-shadow:0 0 0 0 rgba(94,230,176,.95)}60%{box-shadow:0 0 0 6px rgba(94,230,176,0)}100%{box-shadow:0 0 0 0 rgba(94,230,176,0)}}
+@keyframes pop{0%{transform:scale(1);font-weight:600}25%{transform:scale(1.4);font-weight:700}60%{transform:scale(1);font-weight:700}100%{transform:scale(1);font-weight:600}}
+.hud.levelup .lvl{animation:ring 1.1s ease-out 2}
+.hud.levelup .xpbar{animation:barring 1.1s ease-out 2}
+.hud.levelup .lvl b{animation:pop 1.1s ease-out 1}
+.hud.levelup .xptop span:last-child{font-weight:800;color:var(--mint)}
+
+/* Map */
+.mapwrap{position:relative;background:var(--deep)}
+.map{display:block;width:100%;height:auto}
+.marker{cursor:pointer}
+.marker:focus{outline:none}
+.marker:focus-visible .hit{stroke:#fff;stroke-width:3}
+.fog{transition:opacity .8s}
+.chiprow{display:flex;gap:8px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:8px;background:var(--bar);border:1px solid var(--barline);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.riverlist{display:flex;flex-direction:column;gap:8px}
+.riverbtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;min-height:56px}
+.riverbtn .nm{font-family:var(--display);font-weight:600;font-size:17px}
+.riverbtn .st{font-size:12px;color:var(--muted)}
+.badge-st{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.06em;padding:5px 9px;border-radius:999px;border:1px solid}
+.st-locked{background:#244650;border-color:#6F8F96;color:#D5E4E7}
+.st-explored{background:#2A1F08;border-color:var(--gold);color:#FFC96B}
+.st-open{background:#12483F;border-color:var(--mint);color:#9FF2D0}
+
+/* Buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;width:100%;border-radius:16px;border:0;background:var(--gold);color:var(--goldInk);font-weight:700;font-size:16px;box-shadow:0 4px 0 var(--goldShadow);text-decoration:none}
+.btn:active{transform:translateY(2px);box-shadow:0 2px 0 var(--goldShadow)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;border:2px solid var(--line);color:var(--ink);box-shadow:none;font-weight:600;font-size:15px}
+.iconbtn{width:44px;height:44px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--ink);flex:none}
+.topbar{display:flex;align-items:center;gap:12px;padding-block:14px}
+.topbar h1{font-size:26px;flex:1;min-width:0}
+
+/* River */
+.hero{position:relative;height:140px;border-radius:24px;overflow:hidden;background:linear-gradient(160deg,#1D4D55,#0B2229);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+.hero svg.wave{position:absolute;inset:0;width:100%;height:100%}
+.hero .veil{position:absolute;inset:0;background:rgba(7,22,27,.78)}
+.hero .msg{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;font-family:var(--display);font-size:18px}
+.steps{display:flex;flex-direction:column;gap:10px}
+.step{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;font-weight:600;font-size:14px}
+.step .n{width:28px;height:28px;border-radius:50%;background:#244650;color:#D5E4E7;font-family:var(--display);font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.step.done .n{background:var(--mint);color:#06281C}
+.step.next .n{background:var(--gold);color:var(--goldInk)}
+.ghostfeed{display:flex;flex-direction:column;gap:12px;filter:blur(6px);opacity:.55}
+.ghostfeed div{height:96px;border-radius:20px;background:#1D4D55}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.stat b{font-family:var(--display);font-weight:600;font-size:22px;display:block;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.fchip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);font-weight:500;font-size:13px;padding:0 14px;min-height:40px;border-radius:999px;white-space:nowrap;flex:none}
+.fchip.on{background:var(--gold);border-color:var(--gold);color:var(--goldInk);font-weight:700}
+.notice{background:#12483F;border:1px solid #2F9E78;border-radius:16px;padding:12px 14px;font-size:14px;color:#D8F8EA}
+.warn{background:#3A2410;border:1px solid #B8782E;border-radius:16px;padding:12px 14px;font-size:14px;color:#FFE2B8}
+
+/* Species themes (shared by log screen and feed cards) */
+.th{--text:#F2F7F5;--bg:#0E2A33;--tpanel:#143843;--border:#2A5B67;--label:#A9C4C9;--accent:#FFB547;--accentText:#2A1A00;--shadow:#B97A12;--track:linear-gradient(90deg,#1D4D55,#2E8FC0,#FFB547);--skin:linear-gradient(100deg,#1D4D55,#2D6A73 55%,#4A8A92);--d1:#0B2229;--d2:#0B2229;--d3:#0B2229;--d4:#0B2229;--halo:transparent;--stripe:transparent;--cut:transparent;--tbar:#0A1C22;--barborder:#1F4550}
+.th.brown{--text:#F6F1E8;--bg:#1E150D;--tpanel:#2E2116;--border:#6B4A2B;--label:#D9C3A3;--accent:#F0B93B;--accentText:#2A1A00;--shadow:#9A6E0E;--track:linear-gradient(90deg,#5A3A1F,#B8782E,#F0B93B);--skin:linear-gradient(100deg,#6B4423,#A07A3E 55%,#C9A25A);--d1:#4A2A12;--d2:#F4D35E;--d3:#8BA860;--d4:#D9533B;--halo:#F5EBD0;--stripe:transparent;--cut:transparent;--tbar:#150E08;--barborder:#4A3320}
+.th.steelhead{--bg:#101C24;--tpanel:#19303C;--border:#3E6479;--label:#B9CFDD;--accent:#9BD3F0;--accentText:#08202E;--shadow:#5A97B8;--track:linear-gradient(90deg,#264B60,#6FA8C6,#9BD3F0);--skin:linear-gradient(100deg,#4F6F82,#A9BFCB 55%,#E4ECF0);--d1:#0B1319;--d2:#1B2A33;--d3:#0B1319;--d4:#1B2A33;--halo:transparent;--stripe:#E27B93;--cut:transparent;--tbar:#0B141A;--barborder:#28475A}
+.th.coho{--bg:#111B26;--tpanel:#1B2E40;--border:#41668A;--label:#BBCFE0;--accent:#FF5A4F;--accentText:#2A0805;--shadow:#B0332B;--track:linear-gradient(90deg,#2A4A66,#7FA3C2,#FF5A4F);--skin:linear-gradient(100deg,#3E5C78,#B7C9D8 55%,#E8EEF2);--d1:#0B131A;--d2:#1B2A38;--d3:#0B131A;--d4:#1B2A38;--halo:transparent;--stripe:#E8483E;--cut:transparent;--tbar:#0C151F;--barborder:#2A4560}
+.th.chinook{--bg:#151C15;--tpanel:#222D21;--border:#52694A;--label:#C7D3BD;--accent:#B8D35A;--accentText:#1A2205;--shadow:#7C9230;--track:linear-gradient(90deg,#34452F,#7E9A55,#B8D35A);--skin:linear-gradient(100deg,#4C6247,#9FB095 55%,#D9DDD0);--d1:#0A0E0A;--d2:#1A241A;--d3:#0A0E0A;--d4:#1A241A;--halo:transparent;--stripe:transparent;--cut:transparent;--tbar:#0E140E;--barborder:#394A33}
+.th.cutthroat{--bg:#121D13;--tpanel:#1D2E1F;--border:#40703F;--label:#BFD6B3;--accent:#FF7A3D;--accentText:#2A1000;--shadow:#B3471A;--track:linear-gradient(90deg,#2C4A2C,#8DB36A,#FF7A3D);--skin:linear-gradient(100deg,#5C7F4A,#98B779 55%,#D5C98B);--d1:#0A100A;--d2:#0A100A;--d3:#A9C985;--d4:#0A100A;--halo:transparent;--stripe:transparent;--cut:#FF6A2B;--tbar:#0C150D;--barborder:#2A4A2B}
+.th.rainbow{--bg:#0F2118;--tpanel:#183024;--border:#3B6B4B;--label:#B8D6C2;--accent:#FF6F88;--accentText:#2A0710;--shadow:#B03A52;--track:linear-gradient(90deg,#1F4A31,#4DAA6A,#FF6F88);--skin:linear-gradient(100deg,#5E8E6B,#A9C9B2 55%,#DCE6DF);--d1:#0B100D;--d2:#0B100D;--d3:#2F7A48;--d4:#D9435F;--halo:transparent;--stripe:#E8567A;--cut:transparent;--tbar:#0A1812;--barborder:#25452F}
+.th.brook{--bg:#0F1E1C;--tpanel:#183230;--border:#3C6B64;--label:#B5D5CE;--accent:#FF8A3D;--accentText:#2A1000;--shadow:#B8561A;--track:linear-gradient(90deg,#24473F,#6E9A5C,#FF8A3D);--skin:linear-gradient(100deg,#3F5F4A,#6F8F5A 55%,#E88A3C);--d1:#EFE6B8;--d2:#E0443C;--d3:#EFE6B8;--d4:#E0443C;--halo:#8CC4F5;--stripe:transparent;--cut:transparent;--tbar:#0A1816;--barborder:#264D47}
+
+/* Log screen */
+.logscreen{background:var(--bg);color:var(--text);min-height:100%;transition:background .3s}
+.logscreen .iconbtn{background:var(--tpanel);border-color:var(--border);color:var(--text)}
+.lbl{font-size:13px;font-weight:600;color:var(--label);margin-bottom:8px;display:block}
+.photo{position:relative;height:150px;border-radius:20px;overflow:hidden;background:var(--skin);border:2px solid var(--border);display:flex;align-items:center;justify-content:center}
+.photo > svg{position:absolute;inset:0;width:100%;height:100%}
+.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.photo label{position:relative;display:inline-flex;align-items:center;gap:10px;background:rgba(10,8,6,.72);color:#F6F1E8;padding:10px 18px;border-radius:999px;font-weight:600;cursor:pointer;min-height:44px}
+.photo input{position:absolute;width:1px;height:1px;opacity:0}
+.photo .retake{position:absolute;right:10px;bottom:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--tpanel);border:1px solid var(--border);color:var(--text);font-weight:500;font-size:13px;padding:0 14px;min-height:44px;border-radius:999px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accentText);font-weight:700;box-shadow:0 3px 0 var(--shadow)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
+.val{background:var(--accent);color:var(--accentText);font-family:var(--display);font-weight:600;font-size:15px;padding:3px 12px;border-radius:999px;white-space:nowrap}
+.tier{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.04em}
+.bub{-webkit-appearance:none;appearance:none;width:100%;height:16px;border-radius:999px;outline:none;margin:9px 0 0;display:block;background:var(--track)}
+.bub::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#fff 0 11%,var(--accent) 12%);border:3px solid #fff;box-shadow:0 4px 0 rgba(0,0,0,.35);cursor:pointer}
+.bub::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 4px 0 rgba(0,0,0,.35);cursor:pointer}
+.bub:focus-visible{outline:3px solid #fff;outline-offset:6px}
+.ends{display:flex;justify-content:space-between;font-size:11px;color:var(--label);margin-top:8px}
+.txt{width:100%;min-height:44px;border-radius:12px;border:1px solid var(--border);background:var(--tpanel);padding:0 12px;font-size:15px}
+.postbar{position:sticky;bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--tbar);border-top:1px solid var(--barborder);padding-block:12px;display:flex;flex-direction:column;gap:6px;margin-top:16px}
+.postbar .btn{background:var(--accent);color:var(--accentText);box-shadow:0 4px 0 var(--shadow)}
+
+/* Feed cards */
+.post{background:var(--tpanel);border:2px solid var(--border);border-radius:24px;overflow:hidden;color:var(--text)}
+.post .ph{position:relative;height:180px;background:var(--skin);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.75)}
+.post .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.post .len{position:absolute;right:12px;top:12px;background:var(--accent);color:var(--accentText);font-family:var(--display);font-weight:600;font-size:18px;padding:6px 12px;border-radius:999px;box-shadow:0 3px 0 var(--shadow)}
+.post .body{padding:12px 16px 14px;display:flex;flex-direction:column;gap:10px}
+.post .who{display:flex;align-items:center;gap:10px}
+.post .av{width:32px;height:32px;border-radius:50%;background:var(--accent);flex:none;object-fit:cover}
+.post .sp{font-family:var(--display);font-weight:600;font-size:17px;color:var(--accent)}
+.post .bdg{margin-left:auto;background:var(--bg);border:1px solid var(--accent);color:var(--accent);font-size:11px;font-weight:700;padding:4px 8px;border-radius:8px;white-space:nowrap}
+.post .cond{display:flex;gap:8px;flex-wrap:wrap}
+.post .cond div{background:var(--bg);border-radius:10px;padding:6px 10px;font-size:12px}
+.post .cond span{color:var(--label)}
+
+/* Profile */
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.sbadge{border-radius:16px;padding:12px 8px;text-align:center;border:2px dashed #3E6670;color:#7E9CA3;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:600}
+.sbadge .ic{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#183F4A}
+.sbadge.got{border:2px solid var(--accent);background:var(--tpanel);color:var(--text)}
+.sbadge.got .ic{background:var(--accent);color:var(--accentText)}
+.bigb{display:flex;align-items:center;gap:14px}
+.bigb .tile{width:60px;height:60px;border-radius:16px;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+.bigb .tile b{font-family:var(--display);font-weight:700;font-size:18px;line-height:18px}
+.bigb .tile span{font-size:10px;font-weight:600}
+.pips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.pips i{width:14px;height:14px;border-radius:50%;background:var(--gold);display:block}
+.pips i.empty{background:none;border:2px solid #4A6B73}
+.xprules{display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:14px}
+.xprules b{font-family:var(--display);color:#FFC96B;text-align:right;font-weight:600}
+
+/* Nav + toast */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--bar);border-top:1px solid var(--barline);padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav .in{max-width:480px;margin:0 auto;height:84px;display:flex;align-items:center;justify-content:space-around;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+.nav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:64px;min-height:48px;color:var(--muted);font-size:12px;font-weight:600}
+.nav button.on{color:var(--gold)}
+.nav .fab{width:68px;height:68px;margin-top:-34px;border-radius:50%;background:var(--gold);color:var(--goldInk);box-shadow:0 6px 0 var(--goldShadow);border:4px solid var(--bar)}
+.toast{position:fixed;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;max-width:min(440px,calc(100% - 32px));background:#2A1F08;border:1px solid var(--gold);color:#FFE2B0;border-radius:16px;padding:10px 16px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.45);transition:opacity .3s,transform .3s}
+.toast[hidden]{display:block!important;opacity:0;pointer-events:none;transform:translate(-50%,-8px)}
+.toast b{font-family:var(--display);color:var(--gold)}
+.sec{display:flex;flex-direction:column;gap:16px;padding-block:16px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="hud pad" id="hud">
+    <div class="hudrow">
+      <div class="lvl" aria-label="Level"><small>LVL</small><b id="lvlNum">1</b></div>
+      <div class="xpwrap">
+        <div class="xptop"><span>XP</span><span id="xpText">0 / 500</span></div>
+        <div class="xpbar" role="progressbar" aria-label="XP toward next level" aria-valuemin="0" aria-valuemax="500" id="xpBar"><div class="xpfill" id="xpFill" style="width:0%"></div></div>
+      </div>
+    </div>
+  </header>
+  <main id="screen" aria-live="polite">
+    <div class="pad sec"><div class="card"><h2>Loading your map…</h2><p class="muted">Pulling up Washington's rivers and your progress.</p></div></div>
+  </main>
+</div>
+
+<nav class="nav" aria-label="Main">
+  <div class="in">
+    <button type="button" data-nav="map" id="navMap" class="on"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span>Map</span></button>
+    <button type="button" data-nav="log" class="fab" aria-label="Log a catch"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+    <button type="button" data-nav="profile" id="navProfile"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg><span>Profile</span></button>
+  </div>
+</nav>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- Game data ---------- */
+const RIVERS = [
+  {id:"solduc", name:"Sol Duc River", short:"Sol Duc", x:48, y:324, pts:[[47.95,-124.40],[48.06,-124.10],[47.97,-123.86]]},
+  {id:"puget", name:"Puget Sound", short:"Puget Sound", x:118, y:345, pts:[[47.60,-122.40],[47.95,-122.40],[47.25,-122.55],[48.20,-122.55]]},
+  {id:"yakima", name:"Yakima River", short:"Yakima", x:210, y:427, pts:[[46.85,-120.48],[47.05,-120.65],[47.20,-120.95],[46.60,-120.50],[46.30,-119.70]]},
+  {id:"spokane", name:"Spokane River", short:"Spokane", x:338, y:345, pts:[[47.69,-117.45],[47.67,-117.15],[47.80,-117.80],[47.90,-118.10]]},
+  {id:"granderonde", name:"Grande Ronde River", short:"Grande Ronde", x:350, y:464, pts:[[46.08,-116.98],[46.03,-117.25],[45.95,-117.45]]}
+];
+const RIVER = Object.fromEntries(RIVERS.map(r=>[r.id,r]));
+const SPECIES = [
+  {id:"steelhead", name:"Steelhead", chip:"Steelhead", color:"#9BD3F0"},
+  {id:"coho", name:"Coho salmon", chip:"Coho", color:"#FF5A4F"},
+  {id:"chinook", name:"Chinook salmon", chip:"Chinook", color:"#B8D35A"},
+  {id:"cutthroat", name:"Cutthroat trout", chip:"Cutthroat", color:"#FF7A3D"},
+  {id:"rainbow", name:"Rainbow trout", chip:"Rainbow", color:"#FF6F88"},
+  {id:"brown", name:"Brown trout", chip:"Brown", color:"#F0B93B"},
+  {id:"brook", name:"Brook trout", chip:"Brook", color:"#FF8A3D"}
+];
+const SP = Object.fromEntries(SPECIES.map(s=>[s.id,s]));
+const FLIES = ["Egg pattern","Woolly Bugger","Pheasant Tail","Elk Hair Caddis","Parachute Adams","Intruder","Clouser Minnow","Other"];
+const WEATHER = ["Calm","Light wind","Windy","Rain","Storm"];
+const XP = {explore:50, catchBase:25, firstSpecies:100, over20:200, over30:300, perLevel:500};
+const GPS_MILES = 15;
+
+function sunLabel(v){ v=+v; return v<20?"Overcast":v<40?"Mostly cloudy":v<60?"Partly cloudy":v<80?"Mostly sunny":"Bright sun"; }
+function lengthTier(len){ len=+len; return len>=30?"30":len>20?"20":""; }
+function levelOf(xp){ return Math.floor(xp/XP.perLevel)+1; }
+
+/* XP for one catch, given progress before it. Bonuses stack. */
+function scoreCatch(prog, species, len){
+  const lines=[]; const tier=lengthTier(len);
+  if(tier==="30") lines.push(["30+ inches badge", XP.over30]);
+  else if(tier==="20") lines.push(["20+ inches badge", XP.over20]);
+  else lines.push(["Fish caught", XP.catchBase]);
+  if(!(prog.species||{})[species]) lines.push(["First "+SP[species].chip+" badge", XP.firstSpecies]);
+  return {lines, total:lines.reduce((a,l)=>a+l[1],0), tier};
+}
+
+/* ---------- Helpers ---------- */
+const $ = s=>document.querySelector(s);
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function ago(t){ const m=Math.round((Date.now()-t)/60000); if(m<1)return "just now"; if(m<60)return m+" min ago"; const h=Math.round(m/60); if(h<24)return h+" h ago"; const d=Math.round(h/24); return d+(d===1?" day ago":" days ago"); }
+function miles(a,b){ const R=3958.8,toR=Math.PI/180; const dLat=(b[0]-a[0])*toR,dLon=(b[1]-a[1])*toR; const h=Math.sin(dLat/2)**2+Math.cos(a[0]*toR)*Math.cos(b[0]*toR)*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); return true; }catch(e){ return false; } }
+const ICON = {
+  back:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
+  lock:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  gps:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>',
+  cam:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  fish:'<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c3-5 9-6 14-2l4-3v10l-4-3c-5 4-11 3-14-2z"/><circle cx="8" cy="11" r="0.8" fill="currentColor"/></svg>',
+  fishsm:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c3-5 9-6 14-2l4-3v10l-4-3c-5 4-11 3-14-2z"/></svg>'
+};
+
+/* ---------- Shared feed setup ----------
+   Paste your Supabase Project URL and anon public key here to turn on the shared feed.
+   Leave them empty and the app runs in device-only mode (posts stay on this phone). */
+const CONFIG = {
+  SUPABASE_URL: "",
+  SUPABASE_ANON_KEY: ""
+};
+
+/* ---------- Storage: Supabase when configured, this-device fallback otherwise ---------- */
+const localListeners = new Set();
+function refreshFeeds(){ localListeners.forEach(f=>f()); }
+const store = {
+  mode:"local", uid:null,
+  async init(){
+    let id=lsGet("ffq.uid",null);
+    if(!id){ id="a_"+Math.random().toString(36).slice(2,12)+Date.now().toString(36); lsSet("ffq.uid",id); }
+    this.uid=id;
+    this.mode = CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY ? "shared" : "local";
+  },
+  async loadProgress(){ return lsGet("ffq.progress",null); },
+  async saveProgress(p){ lsSet("ffq.progress",p); },
+  async api(path, opts){
+    opts=opts||{};
+    const key=CONFIG.SUPABASE_ANON_KEY;
+    const r=await fetch(CONFIG.SUPABASE_URL.replace(/\/+$/,"")+"/rest/v1/"+path, {
+      method:opts.method||"GET", body:opts.body,
+      headers:Object.assign({apikey:key, Authorization:"Bearer "+key, "Content-Type":"application/json"}, opts.headers||{})
+    });
+    if(!r.ok) throw new Error("http "+r.status);
+    return r.status===200 ? r.json() : null;
+  },
+  fromRow(r){ return {_id:r.id, river:r.river, species:r.species, length:r.length, sun:r.sun, weather:r.weather, temp:r.temp, fly:r.fly, photo:r.photo, uid:r.uid, angler:r.angler, xp:r.xp, createdAt:r.created_at}; },
+  async addPost(post){
+    if(this.mode==="shared"){
+      await this.api("posts",{method:"POST", headers:{Prefer:"return=minimal"}, body:JSON.stringify({
+        river:post.river, species:post.species, length:post.length, sun:post.sun, weather:post.weather, temp:post.temp,
+        fly:post.fly, photo:post.photo, uid:post.uid, angler:post.angler, xp:post.xp, created_at:post.createdAt})});
+      refreshFeeds(); return;
+    }
+    const all=lsGet("ffq.posts",[]); all.unshift(Object.assign({_id:String(Date.now())},post));
+    if(!lsSet("ffq.posts",all)){ all[0].photo=""; lsSet("ffq.posts",all); }
+    refreshFeeds();
+  },
+  watch(query, filterLocal, cb){
+    let alive=true;
+    const run = this.mode==="shared"
+      ? ()=>this.api(query).then(rows=>{ if(alive) cb(rows.map(this.fromRow)); }).catch(()=>{ if(alive) cb(null); })
+      : ()=>cb(lsGet("ffq.posts",[]).filter(filterLocal));
+    localListeners.add(run); run();
+    const t = this.mode==="shared" ? setInterval(run,20000) : null;
+    return ()=>{ alive=false; localListeners.delete(run); if(t) clearInterval(t); };
+  },
+  watchRiver(river, cb){ return this.watch("posts?select=*&river=eq."+encodeURIComponent(river)+"&order=created_at.desc&limit=60", p=>p.river===river, cb); },
+  watchMine(cb){ return this.watch("posts?select=*&uid=eq."+encodeURIComponent(this.uid)+"&order=created_at.desc&limit=100", ()=>true, cb); }
+};
+function getName(){ return lsGet("ffq.name",""); }
+function initials(n){ n=String(n||"").trim(); if(!n) return "?"; const p=n.split(/\s+/); return (p[0][0]+(p.length>1?p[p.length-1][0]:"")).toUpperCase(); }
+
+/* ---------- State ---------- */
+const blankProgress = ()=>({xp:0, explored:{}, posted:{}, species:{}, big20:0, big30:0, catches:0});
+let prog = blankProgress();
+let view = {screen:"map", river:null, filter:"all", confirmCheckin:false, gpsMsg:""};
+let feed = null, feedUnsub = null, mine = null, mineUnsub = null;
+let log = null;
+function newLog(river){ return {river: river || firstExplored(), species:"", len:16, sun:50, weather:0, temp:50, fly:"", flyOther:"", photo:"", busy:false, err:""}; }
+function firstExplored(){ const r=RIVERS.find(r=>prog.explored[r.id]); return r?r.id:""; }
+function exploredCount(){ return RIVERS.filter(r=>prog.explored[r.id]).length; }
+function riverState(id){ return prog.posted[id] ? "open" : prog.explored[id] ? "explored" : "locked"; }
+
+/* ---------- HUD ---------- */
+let shownLevel = null;
+function renderHud(){
+  const lvl=levelOf(prog.xp), into=prog.xp%XP.perLevel;
+  $("#lvlNum").textContent=lvl;
+  $("#xpText").textContent=into+" / "+XP.perLevel;
+  $("#xpFill").style.width=(into/XP.perLevel*100)+"%";
+  $("#xpBar").setAttribute("aria-valuenow",into);
+  if(shownLevel!==null && lvl>shownLevel){
+    const h=$("#hud"); h.classList.remove("levelup"); void h.offsetWidth; h.classList.add("levelup");
+    setTimeout(()=>h.classList.remove("levelup"),2400);
+  }
+  shownLevel=lvl;
+}
+let toastTimer=null;
+function toast(html){ const t=$("#toast"); t.innerHTML=html; t.hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>{t.hidden=true;},4200); }
+
+async function commit(){ renderHud(); try{ await store.saveProgress(prog); }catch(e){ toast("Couldn't save your progress. Check your connection and try again."); } }
+
+/* ---------- Map screen ---------- */
+const LAND = "M108 190 L365 190 L365 412 L277 412 L261 418 L235 426 L205 433 L179 441 L148 436 L125 440 L112 439 L106 420 L100 401 L75 396 L50 393 L48 380 L52 366 L46 352 L49 341 L40 320 L35 293 L24 271 L20 236 L50 238 L78 250 L100 253 L108 262 L106 290 L96 320 L95 332 L102 336 L112 336 L122 318 L127 296 L132 268 L124 250 L116 232 L120 210 Z";
+function mapSvg(){
+  const holes = RIVERS.filter(r=>prog.explored[r.id]).map(r=>`<circle cx="${r.x}" cy="${r.y}" r="${r.id==="puget"?70:62}" fill="#000" filter="url(#soft)"/>`).join("");
+  const markers = RIVERS.map(r=>{
+    const st=riverState(r.id); const open=st!=="locked";
+    const lx = r.id==="granderonde" ? r.x+20 : r.x; const anchor = r.id==="granderonde" ? "end" : "middle";
+    const label = `${r.name}, ${st==="locked"?"locked":st==="explored"?"explored":"feed open"}`;
+    return `<g class="marker" role="button" tabindex="0" aria-label="${esc(label)}" data-action="river" data-river="${r.id}">
+      <circle class="hit" cx="${r.x}" cy="${r.y}" r="22" fill="transparent"/>
+      ${open?`<circle cx="${r.x}" cy="${r.y}" r="12" fill="#FFB547" stroke="#fff" stroke-width="2"/><circle cx="${r.x}" cy="${r.y}" r="4" fill="#2A1A00"/>`
+           :`<circle cx="${r.x}" cy="${r.y}" r="12" fill="#244650" stroke="#6F8F96" stroke-width="2"/><g transform="translate(${r.x} ${r.y})" fill="none" stroke="#A9C4C9" stroke-width="1.6" stroke-linecap="round"><rect x="-4" y="-1" width="8" height="6" rx="1.5"/><path d="M-2.5 -1v-1.5a2.5 2.5 0 0 1 5 0V-1"/></g>`}
+      ${st==="open"?`<circle cx="${r.x+10}" cy="${r.y-10}" r="6" fill="#5EE6B0" stroke="#07161B" stroke-width="2"/>`:""}
+      <text x="${lx}" y="${r.y+(r.id==="granderonde"?32:27)}" text-anchor="${anchor}" font-family="Inter,sans-serif" font-size="12" font-weight="${open?600:500}" fill="${open?"#F2F7F5":"#A9C4C9"}" stroke="#07161B" stroke-width="3" paint-order="stroke">${esc(r.short)}</text>
+    </g>`;
+  }).join("");
+  return `<svg class="map" viewBox="0 230 390 290" role="img" aria-label="Map of Washington. ${exploredCount()} of 5 waters explored; fog covers the rest.">
+    <defs>
+      <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+      <mask id="fogm"><rect x="0" y="0" width="390" height="844" fill="#fff"/>${holes}</mask>
+      <clipPath id="landclip"><path transform="translate(0 60)" d="${LAND}"/></clipPath>
+    </defs>
+    <rect x="0" y="0" width="390" height="844" fill="#0B2229"/>
+    <g transform="translate(0 60)">
+      <path d="${LAND}" fill="#1D4D55" stroke="#2D6A73" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M340 190 C330 215,300 245,278 267 C255 280,230 290,218 307 C225 322,240 330,233 342 C240 360,255 375,265 391 C268 405,262 414,261 418" fill="none" stroke="#2E8FC0" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+      <g fill="none" stroke="#4CC3FF" stroke-width="3" stroke-linecap="round">
+        <path d="M70 262 C60 258,48 264,36 270 L26 272"/><path d="M169 308 C180 330,195 352,210 367 C230 378,250 385,265 391"/>
+        <path d="M365 296 C355 292,348 289,335 285 C322 280,312 278,304 272"/><path d="M322 440 C334 426,346 414,362 404"/>
+      </g>
+      <g font-family="Inter,sans-serif" font-size="10" letter-spacing="2" fill="#3F6A74" text-anchor="middle">
+        <text x="240" y="182">BRITISH COLUMBIA</text><text x="230" y="460">OREGON</text>
+        <text x="379" y="300" transform="rotate(90 379 300)">IDAHO</text><text x="13" y="345" transform="rotate(-90 13 345)">PACIFIC</text>
+      </g>
+    </g>
+    <rect class="fog" x="0" y="0" width="390" height="844" fill="#07161B" opacity="0.88" mask="url(#fogm)"/>
+    ${markers}
+  </svg>`;
+}
+function renderMap(){
+  const n=exploredCount();
+  const list = RIVERS.map(r=>{
+    const st=riverState(r.id);
+    const sub = st==="locked"?"Hidden in fog · explore for +50 XP":st==="explored"?"Fog cleared · log a catch to open the feed":"Feed open";
+    const tag = st==="locked"?'<span class="badge-st st-locked">LOCKED</span>':st==="explored"?'<span class="badge-st st-explored">EXPLORED</span>':'<span class="badge-st st-open">FEED OPEN</span>';
+    return `<button type="button" class="riverbtn" data-action="river" data-river="${r.id}"><div style="min-width:0"><div class="nm">${esc(r.name)}</div><div class="st">${sub}</div></div>${tag}</button>`;
+  }).join("");
+  return `<div class="mapwrap">${mapSvg()}</div>
+  <div class="pad sec">
+    <div class="chiprow"><span class="pill"><span class="dot" style="background:var(--mint)"></span>${n} of 5 waters explored</span>
+    ${store.mode==="local"?'<span class="pill">Device-only mode: shared feed not set up</span>':""}</div>
+    ${n===0?`<div class="notice"><b>Start your quest.</b> Tap a river, then explore it with GPS or check in when you get there. Each new water clears its fog and earns +50 XP.</div>`:""}
+    <div class="riverlist">${list}</div>
+  </div>`;
+}
+
+/* ---------- River screen ---------- */
+function renderRiver(){
+  const r=RIVER[view.river]; const st=riverState(r.id);
+  const pill = st==="locked"?'<span class="badge-st st-locked">LOCKED</span>':st==="explored"?'<span class="badge-st st-explored">EXPLORED</span>':'<span class="badge-st st-open">UNLOCKED</span>';
+  const head = `<div class="topbar pad"><button type="button" class="iconbtn" data-nav="map" aria-label="Back to map">${ICON.back}</button><h1>${esc(r.name)}</h1>${pill}</div>`;
+  const wave = '<svg class="wave" viewBox="0 0 358 140" preserveAspectRatio="none" aria-hidden="true"><path d="M-10 100 C60 60,110 120,180 70 C240 30,300 80,370 30" fill="none" stroke="#4CC3FF" stroke-width="5" stroke-linecap="round" opacity="0.5"/></svg>';
+  if(st!=="open"){
+    const explored = st==="explored";
+    const action = explored
+      ? `<button type="button" class="btn" data-action="log-here">${ICON.cam} Log a catch here</button>`
+      : view.confirmCheckin
+        ? `<div class="card stack"><b>Are you at the ${esc(r.name)} right now?</b><span class="muted small">Manual check-in is the backup for spots with no GPS signal.</span><button type="button" class="btn" data-action="checkin-yes">Yes, I'm here</button><button type="button" class="btn ghost" data-action="checkin-no">Not yet</button></div>`
+        : `<button type="button" class="btn" data-action="gps">${ICON.gps} Explore with GPS</button><button type="button" class="btn ghost" data-action="checkin">Check in manually</button>`;
+    return head + `<div class="pad stack">
+      <div class="hero">${wave}${explored?"":'<div class="veil"></div>'}<div class="msg">${explored?'<span style="color:var(--mint)">Fog cleared</span>':`<span class="iconbtn" style="width:56px;height:56px">${ICON.lock}</span>Hidden in the fog`}</div></div>
+      <p style="margin:0;color:#D5E4E7">Other anglers' catches on this water stay hidden until you explore it and log a fish of your own.</p>
+      <div class="steps">
+        <div class="step ${explored?"done":"next"}"><span class="n">${explored?"✓":"1"}</span>Reach the river <span class="muted small" style="margin-left:auto">+50 XP</span></div>
+        <div class="step ${explored?"next":""}"><span class="n">2</span>Log a catch to open the feed</div>
+      </div>
+      ${view.gpsMsg?`<div class="warn">${esc(view.gpsMsg)}</div>`:""}
+      ${action}
+      <div class="ghostfeed" aria-hidden="true"><div></div><div></div></div>
+    </div>`;
+  }
+  // Unlocked feed
+  if(feed===null) return head+`<div class="pad"><div class="card">Loading catches…</div></div>`;
+  const posts = feed.filter(p=>SP[p.species]);
+  const speciesSeen = new Set(posts.map(p=>p.species));
+  const yours = posts.filter(p=>p.uid===store.uid).length;
+  const shown = view.filter==="all"?posts:posts.filter(p=>p.species===view.filter);
+  const chips = [`<button type="button" class="fchip ${view.filter==="all"?"on":""}" data-action="filter" data-f="all" aria-pressed="${view.filter==="all"}">All</button>`]
+    .concat(SPECIES.map(s=>`<button type="button" class="fchip ${view.filter===s.id?"on":""}" data-action="filter" data-f="${s.id}" aria-pressed="${view.filter===s.id}"><span class="dot" style="background:${s.color}"></span>${s.chip}</button>`)).join("");
+  return head + `<div class="pad stack">
+    <div class="stats"><div class="stat"><b>${posts.length}</b><span>catches logged</span></div><div class="stat"><b>${speciesSeen.size}</b><span>species seen</span></div><div class="stat"><b>${yours}</b><span>yours</span></div></div>
+    <div class="filters" role="group" aria-label="Filter by species">${chips}</div>
+    <div class="stack" id="feedList">${shown.length?shown.map(postCard).join(""):`<div class="card muted">No ${view.filter==="all"?"":esc(SP[view.filter].chip)+" "}catches here yet.</div>`}</div>
+    <button type="button" class="btn" data-action="log-here">${ICON.cam} Log a catch here</button>
+  </div>`;
+}
+function postCard(p){
+  const s=SP[p.species]; const tier=lengthTier(p.length);
+  const photo = typeof p.photo==="string" && /^data:image\/(jpeg|png|webp);base64,/.test(p.photo) ? `<img src="${p.photo}" alt="${esc(s.name)} caught on the ${esc((RIVER[p.river]||{}).name||"")}">` : ICON.fish;
+  return `<article class="post th ${s.id}">
+    <div class="ph">${photo}<div class="len">${esc(Math.round(+p.length||0))} in</div></div>
+    <div class="body">
+      <div class="who"><div class="av" aria-hidden="true" style="display:flex;align-items:center;justify-content:center;color:var(--accentText);font-weight:700;font-size:13px">${esc(initials(p.angler))}</div><div style="flex:1;min-width:0"><div class="sp">${esc(s.name)}</div><div class="small" style="color:var(--label)"><span>${p.uid===store.uid?"You":esc(p.angler||"Angler")}</span> · ${ago(+p.createdAt||Date.now())}</div></div>${tier?`<div class="bdg">${tier}+ INCHES</div>`:""}</div>
+      <div class="cond"><div><span>Fly</span> ${esc(p.fly||"—")}</div><div><span>Sun</span> ${esc(sunLabel(p.sun))}</div><div><span>Weather</span> ${esc(WEATHER[+p.weather]||"—")}</div><div><span>Temp</span> ${esc(Math.round(+p.temp||0))}°F</div></div>
+    </div>
+  </article>`;
+}
+/* ---------- Log screen ---------- */
+function spots(){
+  const pts=[[18,22,3,1],[40,64,2.5,2],[52,30,3.5,4],[74,74,3,1],[92,18,2.5,3],[110,50,4,2],[128,80,3,1],[146,26,3.5,4],[160,62,2.5,3],[178,14,3,1],[196,48,4,2],[214,78,3,1],[232,30,3.5,4],[250,60,2.5,3],[268,18,3,1],[284,52,4,2],[302,82,3,1],[318,28,3.5,4],[334,64,2.5,3],[346,16,3,1]];
+  return '<svg viewBox="0 0 358 150" preserveAspectRatio="none" aria-hidden="true"><path d="M0 80 C90 64,180 96,358 72" fill="none" style="stroke:var(--stripe)" stroke-width="18" opacity="0.65"/><path d="M10 110 L50 134" style="stroke:var(--cut)" stroke-width="6" stroke-linecap="round"/><path d="M26 98 L68 126" style="stroke:var(--cut)" stroke-width="6" stroke-linecap="round"/>'+pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]*1.5}" r="${p[2]}" style="fill:var(--d${p[3]});stroke:var(--halo)" stroke-width="1.6"/>`).join("")+'</svg>';
+}
+function renderLog(){
+  if(!log) log=newLog(view.river);
+  const explored = RIVERS.filter(r=>prog.explored[r.id]);
+  const back = `<button type="button" class="iconbtn" data-nav="${view.river?"river":"map"}" aria-label="Back">${ICON.back}</button>`;
+  if(!explored.length){
+    return `<div class="logscreen th"><div class="topbar pad">${back}<h1>Log your catch</h1></div><div class="pad stack">
+      <div class="card stack"><h2>Explore a river first</h2><p class="muted" style="margin:0">Catches are logged to a water you've explored. Pick a river on the map and clear its fog to start.</p><button type="button" class="btn" data-nav="map">Go to the map</button></div></div></div>`;
+  }
+  if(!prog.explored[log.river]) log.river=explored[0].id;
+  const L=log; const tier=lengthTier(L.len);
+  const riverChips = explored.map(r=>`<button type="button" class="chip ${L.river===r.id?"on":""}" data-action="log-river" data-river="${r.id}" aria-pressed="${L.river===r.id}">${esc(r.short)}</button>`).join("");
+  const spChips = SPECIES.map(s=>`<button type="button" class="chip ${L.species===s.id?"on":""}" data-action="log-species" data-sp="${s.id}" aria-pressed="${L.species===s.id}">${s.chip}</button>`).join("");
+  const flyChips = FLIES.map(f=>`<button type="button" class="chip ${L.fly===f?"on":""}" data-action="log-fly" data-fly="${esc(f)}" aria-pressed="${L.fly===f}">${esc(f)}</button>`).join("");
+  const preview = L.species ? scoreCatch(prog,L.species,L.len) : null;
+  return `<div class="logscreen th ${L.species||""}" id="logRoot">
+    <div class="topbar pad">${back}<div style="flex:1;min-width:0"><h1 style="font-size:24px">Log your catch</h1><div class="small" style="color:var(--label)">${esc(RIVER[L.river].name)}</div></div></div>
+    <form class="pad stack" id="logForm" novalidate>
+      <div class="photo" id="photoBox">${L.photo?`<img src="${L.photo}" alt="Your catch">`:spots()}
+        <label for="photoIn" ${L.photo?'class="retake"':""}>${ICON.cam}<span>${L.photo?"Retake":"Snap your fish"}</span></label>
+        <input id="photoIn" type="file" accept="image/*" capture="environment">
+      </div>
+      ${getName()?"":`<div><label class="lbl" for="nameIn">Your angler name</label><input class="txt" id="nameIn" maxlength="24" autocomplete="nickname" value="${esc(L.name||"")}" placeholder="Shown on your posts"></div>`}
+      ${explored.length>1?`<div><span class="lbl">Water</span><div class="chips">${riverChips}</div></div>`:""}
+      <div><span class="lbl">What did you catch?</span><div class="chips" role="group" aria-label="Species">${spChips}</div></div>
+      <div>
+        <div class="row"><label class="lbl" for="lenIn" style="margin:0">Length</label><span style="display:inline-flex;align-items:center;gap:8px"><span class="tier" id="tierTxt">${tier?tier+"+ INCHES":""}</span><span class="val" id="lenVal">${L.len} in</span></span></div>
+        <input class="bub" id="lenIn" type="range" min="4" max="45" step="1" value="${L.len}">
+        <div class="ends"><span>4 in</span><span>20</span><span>30</span><span>45 in</span></div>
+      </div>
+      <div>
+        <div class="row"><label class="lbl" for="sunIn" style="margin:0">Sunshine</label><span class="val" id="sunVal">${sunLabel(L.sun)}</span></div>
+        <input class="bub" id="sunIn" type="range" min="0" max="100" step="1" value="${L.sun}">
+        <div class="ends"><span>Overcast</span><span>Bright sun</span></div>
+      </div>
+      <div>
+        <div class="row"><label class="lbl" for="wxIn" style="margin:0">Weather</label><span class="val" id="wxVal">${WEATHER[L.weather]}</span></div>
+        <input class="bub" id="wxIn" type="range" min="0" max="4" step="1" value="${L.weather}">
+        <div class="ends">${WEATHER.map(w=>`<span>${w}</span>`).join("")}</div>
+      </div>
+      <div>
+        <div class="row"><label class="lbl" for="tempIn" style="margin:0">Temperature</label><span class="val" id="tempVal">${L.temp}°F</span></div>
+        <input class="bub" id="tempIn" type="range" min="20" max="100" step="1" value="${L.temp}">
+        <div class="ends"><span>20°F</span><span>100°F</span></div>
+      </div>
+      <div><span class="lbl">Fly used</span><div class="chips" role="group" aria-label="Fly used">${flyChips}</div>
+        ${L.fly==="Other"?`<label class="lbl" for="flyOther" style="margin-top:10px">Fly name</label><input class="txt" id="flyOther" maxlength="40" value="${esc(L.flyOther)}" placeholder="e.g. Chubby Chernobyl">`:""}
+      </div>
+      <div class="postbar">
+        ${L.err?`<div class="small" style="color:#FFD0C2;text-align:center">${esc(L.err)}</div>`:""}
+        <button type="submit" class="btn" ${L.busy?"disabled":""}>${L.busy?"Posting…":"Certify and post catch"}${preview&&!L.busy?` <span style="opacity:.8">+${preview.total} XP</span>`:""}</button>
+        <div class="small" style="color:var(--label);text-align:center">Choosing your species certifies the catch and posts it to the ${esc(RIVER[L.river].short)} feed.</div>
+      </div>
+    </form>
+  </div>`;
+}
+function updateLogLive(){
+  const L=log; const tier=lengthTier(L.len);
+  const t=$("#tierTxt"); if(t) t.textContent = tier?tier+"+ INCHES":"";
+  const lv=$("#lenVal"); if(lv) lv.textContent=L.len+" in";
+  const sv=$("#sunVal"); if(sv) sv.textContent=sunLabel(L.sun);
+  const wv=$("#wxVal"); if(wv) wv.textContent=WEATHER[L.weather];
+  const tv=$("#tempVal"); if(tv) tv.textContent=L.temp+"°F";
+  const b=document.querySelector("#logForm button[type=submit]");
+  if(b && L.species && !L.busy){ b.innerHTML=`Certify and post catch <span style="opacity:.8">+${scoreCatch(prog,L.species,L.len).total} XP</span>`; }
+}
+function compressPhoto(file){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file); const img=new Image();
+    img.onload=()=>{ const max=720; let w=img.naturalWidth,h=img.naturalHeight; const k=Math.min(1,max/Math.max(w,h)); w=Math.round(w*k); h=Math.round(h*k);
+      const c=document.createElement("canvas"); c.width=w; c.height=h; c.getContext("2d").drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
+      let q=0.72, out=c.toDataURL("image/jpeg",q); while(out.length>170000 && q>0.35){ q-=0.1; out=c.toDataURL("image/jpeg",q); }
+      resolve(out); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error("bad image")); };
+    img.src=url;
+  });
+}
+async function submitLog(){
+  const L=log;
+  if(!L.species){ L.err="Pick the species you caught to certify the catch."; render(); return; }
+  if(!prog.explored[L.river]){ L.err="Explore this water before logging a catch."; render(); return; }
+  if(!getName()){ const n=String(L.name||"").trim().slice(0,24); if(!n){ L.err="Add your angler name so others know whose catch this is."; render(); return; } lsSet("ffq.name",n); }
+  const fly = L.fly==="Other" ? (L.flyOther.trim()||"Other") : (L.fly||"Not recorded");
+  const score = scoreCatch(prog,L.species,L.len);
+  const post = {river:L.river, species:L.species, length:+L.len, sun:+L.sun, weather:+L.weather, temp:+L.temp, fly:fly.slice(0,40), photo:L.photo||"", uid:store.uid||"", angler:getName(), xp:score.total, createdAt:Date.now()};
+  L.busy=true; L.err=""; render();
+  try{ await store.addPost(post); }
+  catch(e){ L.busy=false; L.err = "Couldn't post your catch. Check your connection and try again."; render(); return; }
+  const before=levelOf(prog.xp);
+  prog.xp+=score.total; prog.catches=(prog.catches||0)+1;
+  prog.species=Object.assign({},prog.species,{[L.species]:(prog.species[L.species]||0)+1});
+  if(score.tier==="20") prog.big20=(prog.big20||0)+1;
+  if(score.tier==="30") prog.big30=(prog.big30||0)+1;
+  const firstOpen=!prog.posted[L.river];
+  prog.posted=Object.assign({},prog.posted,{[L.river]:true});
+  await commit();
+  const lvlUp = levelOf(prog.xp)>before;
+  toast(score.lines.map(l=>`${esc(l[0])} <b>+${l[1]}</b>`).join(" · ")+(lvlUp?` · <b>Level ${levelOf(prog.xp)}!</b>`:"")+(firstOpen?" · Feed unlocked":""));
+  const river=L.river; log=null; go("river",river);
+}
+
+/* ---------- Profile ---------- */
+function renderProfile(){
+  const lvl=levelOf(prog.xp), into=prog.xp%XP.perLevel;
+  const got=SPECIES.filter(s=>prog.species[s.id]).length;
+  const sb=SPECIES.map(s=>{ const n=prog.species[s.id]||0; return `<div class="sbadge th ${n?s.id+" got":""}"><span class="ic">${ICON.fishsm}</span><span>${s.chip}</span><span class="small" style="font-weight:500">${n?"×"+n:"Not yet"}</span></div>`; }).join("");
+  const pips=(n)=>{ const shown=Math.max(5,Math.ceil(n/5)*5); return Array.from({length:Math.min(shown,20)},(_,i)=>`<i class="${i<n?"":"empty"}"></i>`).join(""); };
+  const mineList = mine===null ? '<div class="muted">Loading…</div>' : (mine.length? mine.slice(0,10).map(p=>{ const s=SP[p.species]; if(!s) return ""; return `<div class="th ${s.id}" style="display:flex;align-items:center;gap:12px;background:var(--tpanel);border:1px solid var(--border);border-radius:14px;padding:10px 12px"><span class="dot" style="background:var(--accent);width:12px;height:12px"></span><div style="flex:1;min-width:0"><b>${esc(s.name)}</b> · ${esc(Math.round(+p.length||0))} in<div class="small" style="color:var(--label)">${esc((RIVER[p.river]||{}).name||"")} · ${ago(+p.createdAt||Date.now())}</div></div><b style="font-family:var(--display);color:var(--accent)">+${esc(+p.xp||0)}</b></div>`; }).join("") : '<div class="muted">No catches yet. Your log fills in as you post.</div>');
+  const nextRiver = RIVERS.find(r=>!prog.explored[r.id]);
+  return `<div class="pad sec">
+    <div class="card" style="display:flex;align-items:center;gap:16px">
+      <div class="lvl" style="width:72px;height:72px"><small>LEVEL</small><b style="font-size:34px;line-height:30px">${lvl}</b></div>
+      <div style="flex:1;min-width:0">${getName()?`<div class="small muted">${esc(getName())}</div>`:""}<h2 style="font-size:20px">${prog.xp.toLocaleString()} XP total</h2>
+        <div class="xpbar" style="background:var(--water)"><div class="xpfill" style="width:${into/XP.perLevel*100}%"></div></div>
+        <div class="small muted" style="display:flex;justify-content:space-between;margin-top:6px"><span>${into} / ${XP.perLevel} XP</span><span>${XP.perLevel-into} to Level ${lvl+1}</span></div></div>
+    </div>
+    <div class="stack"><div style="display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-size:18px">Species badges</h3><span class="small muted">${got} of 7 · +100 XP each</span></div><div class="bgrid">${sb}</div></div>
+    <div class="card stack"><h3 style="font-size:18px">Big fish badges</h3>
+      <div class="bigb"><div class="tile" style="background:#B97A12"><b>20+</b><span>inches</span></div><div style="flex:1;min-width:0"><b>20+ inches ×${prog.big20||0}</b><div class="small muted">Over 20, under 30</div><div class="pips">${pips(prog.big20||0)}</div></div><b style="font-family:var(--display);color:#FFC96B">+200</b></div>
+      <div class="bigb"><div class="tile" style="background:#7C5CF0"><b>30+</b><span>inches</span></div><div style="flex:1;min-width:0"><b>30+ inches ×${prog.big30||0}</b><div class="small muted">30 inches and up</div><div class="pips">${pips(prog.big30||0)}</div></div><b style="font-family:var(--display);color:#FFC96B">+300</b></div>
+    </div>
+    ${nextRiver?`<div class="notice"><b>Next up:</b> explore the ${esc(nextRiver.short)} for +50 XP, clear its fog and open a new feed.</div>`:`<div class="notice"><b>All 5 waters explored.</b> Keep chasing badges.</div>`}
+    <div class="stack"><h3 style="font-size:18px">Your catches</h3>${mineList}</div>
+    <div class="card"><h3 style="font-size:16px;margin-bottom:10px">How XP works</h3><div class="xprules">
+      <span>Explore a new water</span><b>+50</b><span>Catch 20 in or under</span><b>+25</b><span>Catch over 20, under 30</span><b>+200</b><span>Catch 30 in or more</span><b>+300</b><span>First of a species</span><b>+100</b><span class="muted">Bonuses stack. New level every</span><b>500</b></div></div>
+  </div>`;
+}
+
+/* ---------- Router ---------- */
+function go(screen, river){
+  view.screen=screen; if(river!==undefined) view.river=river;
+  view.confirmCheckin=false; view.gpsMsg="";
+  if(screen!=="river") view.filter="all";
+  if(screen==="log" && !log) log=newLog(view.river);
+  subscribe(); render(); window.scrollTo(0,0);
+}
+let subKey="";
+function subscribe(){
+  const want = view.screen==="river" && riverState(view.river)==="open" ? "r:"+view.river : "";
+  if(want!==subKey){ if(feedUnsub){feedUnsub();feedUnsub=null;} feed=null; subKey=want;
+    if(want) feedUnsub=store.watchRiver(view.river, d=>{ feed=d||[]; if(view.screen==="river") { render(); } }); }
+  if(view.screen==="profile" && !mineUnsub){ mineUnsub=store.watchMine(d=>{ mine=d||[]; if(view.screen==="profile") render(); }); }
+}
+function render(){
+  const el=$("#screen");
+  el.innerHTML = view.screen==="river"?renderRiver():view.screen==="log"?renderLog():view.screen==="profile"?renderProfile():renderMap();
+  $("#navMap").classList.toggle("on",view.screen==="map"||view.screen==="river");
+  $("#navProfile").classList.toggle("on",view.screen==="profile");
+}
+
+/* ---------- Exploring ---------- */
+async function explore(id, how){
+  if(prog.explored[id]) return;
+  prog.explored=Object.assign({},prog.explored,{[id]:{at:Date.now(),how}});
+  const before=levelOf(prog.xp); prog.xp+=XP.explore;
+  await commit();
+  toast(`<b>+50 XP</b> · ${esc(RIVER[id].short)} explored`+(levelOf(prog.xp)>before?` · <b>Level ${levelOf(prog.xp)}!</b>`:""));
+  view.gpsMsg=""; view.confirmCheckin=false; render();
+}
+function tryGps(id){
+  const fail = "Location isn't available here, so GPS can't confirm you're at the river. Use manual check-in instead.";
+  if(!navigator.geolocation){ view.gpsMsg=fail; render(); return; }
+  view.gpsMsg="Finding your location…"; render();
+  try{
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const me=[pos.coords.latitude,pos.coords.longitude];
+      const d=Math.min(...RIVER[id].pts.map(p=>miles(me,p)));
+      if(d<=GPS_MILES) explore(id,"gps");
+      else { view.gpsMsg=`You're about ${Math.round(d)} miles from the ${RIVER[id].name}. Get within ${GPS_MILES} miles to explore it, or check in manually if GPS is off.`; render(); }
+    }, ()=>{ view.gpsMsg=fail; render(); }, {enableHighAccuracy:false, timeout:12000, maximumAge:300000});
+  }catch(e){ view.gpsMsg=fail; render(); }
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", e=>{
+  const n=e.target.closest("[data-nav]");
+  if(n){ const s=n.dataset.nav; if(s==="log"){ log=null; go("log", view.screen==="river"?view.river:(view.screen==="log"?log&&log.river:null)); } else go(s); return; }
+  const a=e.target.closest("[data-action]"); if(!a) return;
+  const act=a.dataset.action;
+  if(act==="river") go("river",a.dataset.river);
+  else if(act==="gps") tryGps(view.river);
+  else if(act==="checkin"){ view.confirmCheckin=true; render(); }
+  else if(act==="checkin-no"){ view.confirmCheckin=false; render(); }
+  else if(act==="checkin-yes") explore(view.river,"manual");
+  else if(act==="log-here"){ log=newLog(view.river); go("log"); }
+  else if(act==="filter"){ view.filter=a.dataset.f; render(); }
+  else if(act==="log-species"){ log.species=a.dataset.sp; log.err=""; render(); }
+  else if(act==="log-fly"){ log.fly=a.dataset.fly; render(); }
+  else if(act==="log-river"){ log.river=a.dataset.river; render(); }
+});
+document.addEventListener("keydown", e=>{
+  if((e.key==="Enter"||e.key===" ") && e.target.matches && e.target.matches(".marker")){ e.preventDefault(); go("river",e.target.dataset.river); }
+});
+document.addEventListener("input", e=>{
+  if(!log) return; const id=e.target.id;
+  if(id==="lenIn") log.len=+e.target.value; else if(id==="sunIn") log.sun=+e.target.value;
+  else if(id==="wxIn") log.weather=+e.target.value; else if(id==="tempIn") log.temp=+e.target.value;
+  else if(id==="flyOther"){ log.flyOther=e.target.value; return; }
+  else if(id==="nameIn"){ log.name=e.target.value; return; } else return;
+  updateLogLive();
+});
+document.addEventListener("change", async e=>{
+  if(e.target.id!=="photoIn" || !log) return;
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  try{ log.photo=await compressPhoto(f); log.err=""; }catch(err){ log.err="That file isn't a photo we can read. Try a JPG or PNG."; }
+  render();
+});
+document.addEventListener("submit", e=>{ if(e.target.id==="logForm"){ e.preventDefault(); if(!log.busy) submitLog(); } });
+
+/* ---------- Boot ---------- */
+(async function boot(){
+  renderHud(); render();
+  await store.init();
+  const saved = await store.loadProgress();
+  if(saved) prog = Object.assign(blankProgress(), saved);
+  shownLevel = levelOf(prog.xp);
+  renderHud(); render();
+})();
+})();
+</script>
+</body>
+</html>
